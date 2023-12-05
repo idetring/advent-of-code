@@ -16,43 +16,53 @@ def parse_input(ifile):
                 continue
             ints = [int(s) for s in re.findall('\d+',line)]
             if ints:
-                mappings[key].append(defrange(ints[0],ints[1],ints[2]))
+                mappings[key].append((ints[0],ints[1],ints[2])) # dest/src/sz
 
     return (seeds,mappings)
 
-def defrange(destination,source,rangelength):
-    dest = range(destination,destination+rangelength)
-    src = range(source,source+rangelength)
-    return (dest,src)
-
-def conversion(mappings,value):
+def map_value(mappings,value):
     for m in mappings:
-        if value in m[1]:
-            diff =value - m[1].start if m[1].start != 0 else value
-            k =  m[0].start + diff
-            return k
+        if value in range(m[1],m[1]+m[2]):
+            newvalue = value - m[1] + m[0] 
+            return newvalue 
     return value
 
-def conversion_inv(mappings,value):
-    for m in mappings:
-        if value in m[0]:
-            diff =value - m[0].start if m[0].start != 0 else value
-            k =  m[1].start + diff
-            return k
-    return value
-
-def conversionchain(mappings,value):
+def mapchain_value(mappings,value):
     chain = ['seed-to-soil','soil-to-fertilizer','fertilizer-to-water','water-to-light','light-to-temperature','temperature-to-humidity','humidity-to-location']
     for c in chain:
-        value = conversion(mappings[c],value)
+        value = map_value(mappings[c],value)
     return value
 
-def conversionchain_inv(mappings,value):
+
+def map_ranges(mappings,ranges):
+    A = []
+    for m in mappings:
+      src_end = m[1]+m[2]
+      newranges = []
+      while ranges:
+        # [st                                     ed)
+        #          [src       src_end]
+        # [BEFORE ][INTER            ][AFTER        )
+        (st,ed) = ranges.pop()
+        # (src,sz) might cut (st,ed)
+        before = (st,min(ed,m[1]))
+        inter = (max(st, m[1]), min(src_end, ed))
+        after = (max(src_end, st), ed)
+        if before[1]>before[0]:
+          newranges.append(before)
+        if inter[1]>inter[0]:
+          A.append((inter[0]-m[1]+m[0], inter[1]-m[1]+m[0]))
+        if after[1]>after[0]:
+          newranges.append(after)
+      ranges = newranges
+    return A+ranges
+
+def mapchain_ranges(mappings,ranges):
     chain = ['seed-to-soil','soil-to-fertilizer','fertilizer-to-water','water-to-light','light-to-temperature','temperature-to-humidity','humidity-to-location']
-    chain.reverse()
     for c in chain:
-        value = conversion_inv(mappings[c],value)
-    return value
+        ranges = map_ranges(mappings[c],ranges)
+    return ranges
+
 
 def alternate(i):
     i = iter(i)
@@ -65,12 +75,18 @@ def alternate(i):
 def main():
 
     seeds,mappings = parse_input(ifile)
-    locations = [conversionchain(mappings,s) for s in seeds]
+    locations = [mapchain_value(mappings,s) for s in seeds]
     result1=min(locations)
 
     ##
-
-    result2=None
+    seeds,mappings = parse_input(ifile)
+    seedsranges = [(a,b) for a,b in alternate(seeds)]
+    part2 = []
+    for sr in seedsranges:
+        ranges = [(sr[0],sr[0]+sr[1])]
+        locations = mapchain_ranges(mappings,ranges)
+        part2.append(min(locations)[0])
+    result2=min(part2)
 
     print(f"""2023 - Day4 
     Part 1: {result1}
