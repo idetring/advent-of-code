@@ -22,4 +22,4 @@ if __name__ == "__main__":
             p1 += dp(string, (numbers := tuple(map(int, numbers.split(",")))))
             p2 += dp("?".join([string] * 5), numbers * 5)
     print('Result Part1:',p1)
-    print('Result Part2:', p2)
+    print('Result Part2:',p2)
